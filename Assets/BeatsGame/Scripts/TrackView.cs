@@ -10,7 +10,13 @@ namespace Beats
     [RequireComponent (typeof(RectTransform))]
     public class TrackView : MonoBehaviour
     {
-        [SerializeField] private Track _track;
+        public enum Trigger
+        {
+            Missed,
+            Right,
+            Wrong
+        }
+        //[SerializeField] private Track _track;
 
         [SerializeField] private RectTransform _up;
         [SerializeField] private RectTransform _down;
@@ -19,16 +25,44 @@ namespace Beats
 
         [SerializeField] private RectTransform _empty;
 
+        private float _trackViewSpeed;
         private RectTransform _rTransform;
+        private Vector2 _position;
+        private float _beatViewSize;
+        private float _spacing;
+        private List<Image> _beatsView;
+
+        public float Position
+        {
+            get { return _position.y; }
+            set 
+            {
+                _position.y = value;
+                _rTransform.anchoredPosition = _position;
+            }
+        }
 
         private void Start()
         {
-            Init(_track);
+            Init(GameplayController.Instance.Track);
+        }
+
+        private void Update()
+        {
+            _trackViewSpeed = GameplayController.Instance.SecondPerBeat;
+            Position -= (_beatViewSize + _spacing) * Time.deltaTime * _trackViewSpeed;
         }
 
         public void Init(Track track)
         {
             _rTransform = (RectTransform)transform;
+
+            _position = _rTransform.anchoredPosition;
+
+            _beatViewSize = _empty.rect.height;
+            _spacing = GetComponent<VerticalLayoutGroup>().spacing;
+
+            _beatsView = new ();
 
             foreach (int b in track.beats)
             {
@@ -51,8 +85,26 @@ namespace Beats
                         gameObject = _empty.gameObject;
                         break;
                 }
-                Transform view = Instantiate(gameObject, transform).transform;
-                view.SetAsFirstSibling();
+                Image view = Instantiate(gameObject, transform).GetComponent<Image>();
+                view.transform.SetAsFirstSibling();
+
+                _beatsView.Add(view);
+            }
+        }
+
+        public void TriggerBeatView(int index, Trigger trigger)
+        {
+            switch(trigger)
+            {
+                case Trigger.Missed:
+                    _beatsView[index].color = Color.gray;
+                    break;
+                case Trigger.Right:
+                    _beatsView[index].color = Color.green;
+                    break;
+                case Trigger.Wrong:
+                    _beatsView[index].color = Color.cyan;
+                    break;
             }
         }
     }
